@@ -26,7 +26,7 @@ class GameOfLifeSeq():
         self.lp.mode = Mode.PROG  # Switch to the programmer mode
 
     @staticmethod
-    def update(cur):
+    def updateWorld(cur):
         nxt = np.zeros((cur.shape[0], cur.shape[1]))
 
         for r, c in np.ndindex(cur.shape):
@@ -110,7 +110,7 @@ class GameOfLifeSeq():
 
 
     def updatePattern(self):
-        self.pattern = self.update(self.pattern)
+        self.pattern = self.updateWorld(self.pattern)
         if np.array_equal(self.pattern, self.oldpattern):
             self.pattern = self.getPattern(self.ROWS,self.COLS)
             self.oldpattern = self.getPattern(self.ROWS,self.COLS)
