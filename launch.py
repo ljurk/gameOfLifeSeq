@@ -32,12 +32,8 @@ class GameOfLifeSeq():
         for r, c in np.ndindex(cur.shape):
             num_alive = np.sum(cur[r-1 if r != 0 else 0:r+2, c-1 if c != 0 else 0:c+2]) - cur[r, c]
 
-            col = 0
             if (cur[r, c] == 1 and 2 <= num_alive <= 3) or (cur[r, c] == 0 and num_alive == 3):
                 nxt[r, c] = 1
-                col = 1
-
-            col = col if cur[r, c] == 1 else 0
 
         return nxt
 
