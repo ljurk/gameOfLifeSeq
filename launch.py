@@ -42,13 +42,13 @@ class GameOfLifeSeq():
         self.oldpattern = self.getPattern(self.ROWS,self.COLS)
         self.lp = find_launchpads()[0]  # Get the first available launchpad
         self.lp.open()  # Open device for reading and writing on MIDI interface (by default)  # noqa
-        #mido.set_backend('mido.backends.rtmidi/UNIX_JACK')
         self.midi = mido.open_output()
 
         self.lp.mode = Mode.PROG  # Switch to the programmer mode
 
     @staticmethod
     def updateWorld(cur):
+        # update world based on conways rules
         nxt = np.zeros((cur.shape[0], cur.shape[1]))
 
         for r, c in np.ndindex(cur.shape):
@@ -61,21 +61,7 @@ class GameOfLifeSeq():
 
     @staticmethod
     def getPattern(rows, columns):
-        #return np.array([(0, 0, 1, 0, 0, 1, 0, 0),
-        #                 (0, 0, 1, 0, 0, 1, 0, 0),
-        #                 (1, 1, 0, 1, 1, 0, 1, 1),
-        #                 (0, 0, 1, 0, 0, 1, 0, 0),
-        #                 (0, 0, 1, 0, 0, 1, 0, 0),
-        #                 (1, 1, 0, 1, 1, 0, 1, 1),
-        #                 (0, 0, 1, 0, 0, 1, 0, 0),
-        #                 (0, 0, 1, 0, 0, 1, 0, 0)])
-        #X= np.zeros((rows, columns))
-
-        #blinker = [1, 1, 1]
-        #toad = [[1, 1, 1, 0],[0, 1, 1, 1]]
-        #X[2, 5:9] = blinker
-        #X[2:4, 2:6] = toad
-        #return X
+        # create a random world
 
         tempArray = []
         for row in range(rows):
@@ -85,6 +71,7 @@ class GameOfLifeSeq():
         return np.array(tempArray)
 
     def displayPattern(self, lp, pattern, currentCol):
+        # display pattern on launchpad
         for y, x in np.ndindex(pattern.shape):
             if x == currentCol and pattern[x, y]:
                 lp.grid.led(x, y).color = 'violet'
@@ -102,6 +89,7 @@ class GameOfLifeSeq():
                 lp.grid.led(x, y).color = 0
 
     def displayCurrentCol(self):
+        # Lauflicht
         if self.currentCol > 0:
             self.lp.panel.led(Labeled().button_names[self.currentCol - 1]).color = 0
         else:
@@ -110,6 +98,7 @@ class GameOfLifeSeq():
 
 
     def handle_event(self, button_event):
+        # called when a launchpad button is pressed
         if not button_event or not button_event.button:
             return
         if button_event.button.name == 'stop_solo_mute' and button_event.type == ButtonEvent.PRESS:
@@ -139,6 +128,7 @@ class GameOfLifeSeq():
 
 
     def updatePattern(self):
+        # check if pattern has changed or not; if its static create a new random pattern
         self.pattern = self.updateWorld(self.pattern)
         if np.array_equal(self.pattern, self.oldpattern):
             self.pattern = self.getPattern(self.ROWS,self.COLS)
