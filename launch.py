@@ -7,6 +7,7 @@ from lpminimk3.region import Labeled
 import random
 import time
 import sys
+import mido
 import numpy as np
 import random
 
@@ -16,12 +17,33 @@ class GameOfLifeSeq():
     COLS = 8
     ROWS = 8
     started = False
+    notes = [mido.Message('note_on', channel=13, note=36, time=0.5, velocity=64),
+             mido.Message('note_on', channel=13, note=37, time=0.5, velocity=64),
+             mido.Message('note_on', channel=13, note=38, time=0.5, velocity=64),
+             mido.Message('note_on', channel=13, note=39, time=0.5, velocity=64),
+             mido.Message('note_on', channel=13, note=40, time=0.5, velocity=64),
+             mido.Message('note_on', channel=13, note=41, time=0.5, velocity=64),
+             mido.Message('note_on', channel=13, note=42, time=0.5, velocity=64),
+             mido.Message('note_on', channel=13, note=43, time=0.5, velocity=64),
+             mido.Message('note_on', channel=13, note=44, time=0.5, velocity=64)]
+    notesOff = [mido.Message('note_off', channel=13, note=36, time=0, velocity=64),
+                mido.Message('note_off', channel=13, note=37, time=0, velocity=64),
+                mido.Message('note_off', channel=13, note=38, time=0, velocity=64),
+                mido.Message('note_off', channel=13, note=39, time=0, velocity=64),
+                mido.Message('note_off', channel=13, note=40, time=0, velocity=64),
+                mido.Message('note_off', channel=13, note=41, time=0, velocity=64),
+                mido.Message('note_off', channel=13, note=42, time=0, velocity=64),
+                mido.Message('note_off', channel=13, note=43, time=0, velocity=64),
+                mido.Message('note_off', channel=13, note=44, time=0, velocity=64)]
+
     def __init__(self):
         self.currentCol = 0
         self.pattern = self.getPattern(self.ROWS,self.COLS)
         self.oldpattern = self.getPattern(self.ROWS,self.COLS)
         self.lp = find_launchpads()[0]  # Get the first available launchpad
         self.lp.open()  # Open device for reading and writing on MIDI interface (by default)  # noqa
+        #mido.set_backend('mido.backends.rtmidi/UNIX_JACK')
+        self.midi = mido.open_output()
 
         self.lp.mode = Mode.PROG  # Switch to the programmer mode
 
@@ -39,34 +61,39 @@ class GameOfLifeSeq():
 
     @staticmethod
     def getPattern(rows, columns):
-        return np.array([(0, 0, 1, 0, 0, 1, 0, 0),
-                         (0, 0, 1, 0, 0, 1, 0, 0),
-                         (1, 1, 0, 1, 1, 0, 1, 1),
-                         (0, 0, 1, 0, 0, 1, 0, 0),
-                         (0, 0, 1, 0, 0, 1, 0, 0),
-                         (1, 1, 0, 1, 1, 0, 1, 1),
-                         (0, 0, 1, 0, 0, 1, 0, 0),
-                         (0, 0, 1, 0, 0, 1, 0, 0)])
-        X= np.zeros((rows, columns))
+        #return np.array([(0, 0, 1, 0, 0, 1, 0, 0),
+        #                 (0, 0, 1, 0, 0, 1, 0, 0),
+        #                 (1, 1, 0, 1, 1, 0, 1, 1),
+        #                 (0, 0, 1, 0, 0, 1, 0, 0),
+        #                 (0, 0, 1, 0, 0, 1, 0, 0),
+        #                 (1, 1, 0, 1, 1, 0, 1, 1),
+        #                 (0, 0, 1, 0, 0, 1, 0, 0),
+        #                 (0, 0, 1, 0, 0, 1, 0, 0)])
+        #X= np.zeros((rows, columns))
 
-        blinker = [1, 1, 1]
-        toad = [[1, 1, 1, 0],[0, 1, 1, 1]]
-        X[2, 5:9] = blinker
-        X[2:4, 2:6] = toad
-        return X
+        #blinker = [1, 1, 1]
+        #toad = [[1, 1, 1, 0],[0, 1, 1, 1]]
+        #X[2, 5:9] = blinker
+        #X[2:4, 2:6] = toad
+        #return X
 
-        #tempArray = []
-        #for row in range(rows):
-        #    tempArray.append([])
-        #    for col in range(columns):
-        #        tempArray[row].append(random.randrange(2))
-        #return np.array(tempArray)
+        tempArray = []
+        for row in range(rows):
+            tempArray.append([])
+            for col in range(columns):
+                tempArray[row].append(random.randrange(2))
+        return np.array(tempArray)
 
-    @staticmethod
-    def displayPattern(lp, pattern, currentCol):
+    def displayPattern(self, lp, pattern, currentCol):
         for y, x in np.ndindex(pattern.shape):
             if x == currentCol and pattern[x, y]:
                 lp.grid.led(x, y).color = 'violet'
+                if self.started:
+                    #print(f"play {self.notes[y]}")
+                    self.midi.send(self.notes[y])
+                    time.sleep(.01)
+                    #self.midi.send(self.notesOff[x - 1 if x > 0 else self.COLS - 1])
+                    self.midi.send(self.notesOff[y])
             elif x == currentCol:
                 lp.grid.led(x, y).color = colors.ColorPalette.White.SHADE_6
             elif pattern[x, y]:
@@ -93,6 +120,8 @@ class GameOfLifeSeq():
                 button_event.button.led.color = colors.ColorPalette.Red.SHADE_9
             else:
                 button_event.button.led.color = colors.ColorPalette.Green.SHADE_43
+            for msg in self.notesOff:
+                self.midi.send(msg)
             return
 
         if button_event.type == ButtonEvent.PRESS:
@@ -121,7 +150,7 @@ class GameOfLifeSeq():
         while True:
             self.displayPattern(self.lp, self.pattern, self.currentCol)
             self.displayCurrentCol()
-            time.sleep(.1)
+            time.sleep(.3)
             if self.started:
                 if self.currentCol < self.COLS - 1:
                     self.currentCol += 1
